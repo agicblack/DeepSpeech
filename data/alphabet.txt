@@ -1,33 +1,63 @@
-# Each line in this file represents the Unicode codepoint (UTF-8 encoded)
-# associated with a numeric label.
-# A line that starts with # is a comment. You can escape it with \# if you wish
-# to use '#' as a label.
- 
-a
-b
-c
-d
-e
-f
-g
-h
-i
-j
-k
-l
-m
-n
-o
-p
-q
-r
-s
-t
-u
-v
-w
-x
-y
+### Reading in the following transcript files: ###
+### ['/usr/src/DeepSpeech/ru/clips/test.csv'] ###
+### The following unique characters were found in your transcripts: ###
+б
 z
+т
+h
+л
+−
+ё
+!
+»
+a
+ъ
+ь
+у
+п
+с
+р
+m
+f
+к
+—
+«
+;
+…
+o
+м
+i
+–
+о
+ж
+:
+в
+э
+я
+х
+щ
+й
+ф
+д
+l
+ш
+g
+ы
+ч
+е
+c
+s
+а
+г
+r
+e
 '
-# The last (non-comment) line needs to end with a newline.
+x
+ц
+з
+ 
+ю
+и
+н
+t
+### ^^^ You can copy-paste these into data/alphabet.txt ###
