@@ -17,27 +17,22 @@ namespace DeepSpeechClient.Interfaces
         /// Create an object providing an interface to a trained DeepSpeech model.
         /// </summary>
         /// <param name="aModelPath">The path to the frozen model graph.</param>
-        /// <param name="aNCep">The number of cepstrum the model was trained with.</param>
-        /// <param name="aNContext">The context window the model was trained with.</param>
         /// <param name="aAlphabetConfigPath">The path to the configuration file specifying the alphabet used by the network.</param>
         /// <param name="aBeamWidth">The beam width used by the decoder. A larger beam width generates better results at the cost of decoding time.</param>
         /// <exception cref="ArgumentException">Thrown when the native binary failed to create the model.</exception>
-        unsafe void CreateModel(string aModelPath, uint aNCep,
-                   uint aNContext,
+        unsafe void CreateModel(string aModelPath,
                    string aAlphabetConfigPath,
                    uint aBeamWidth);
 
         /// <summary>
         /// Enable decoding using beam scoring with a KenLM language model.
         /// </summary>
-        /// <param name="aAlphabetConfigPath">The path to the configuration file specifying the alphabet used by the network.</param>
         /// <param name="aLMPath">The path to the language model binary file.</param>
         /// <param name="aTriePath">The path to the trie file build from the same vocabulary as the language model binary.</param>
         /// <param name="aLMAlpha">The alpha hyperparameter of the CTC decoder. Language Model weight.</param>
         /// <param name="aLMBeta">The beta hyperparameter of the CTC decoder. Word insertion weight.</param>
         /// <exception cref="ArgumentException">Thrown when the native binary failed to enable decoding with a language model.</exception>
-        unsafe void EnableDecoderWithLM(string aAlphabetConfigPath,
-                  string aLMPath,
+        unsafe void EnableDecoderWithLM(string aLMPath,
                   string aTriePath,
                   float aLMAlpha,
                   float aLMBeta);
@@ -69,7 +64,7 @@ namespace DeepSpeechClient.Interfaces
         /// This can be used if you no longer need the result of an ongoing streaming
         /// inference and don't want to perform a costly decode operation.
         /// </summary>
-        unsafe void DiscardStream();
+        unsafe void FreeStream();
 
         /// <summary>
         /// Free a DeepSpeech allocated string
@@ -84,12 +79,9 @@ namespace DeepSpeechClient.Interfaces
         /// <summary>
         /// Creates a new streaming inference state.
         /// </summary>
-        /// <param name="aPreAllocFrames">Number of timestep frames to reserve.
-        /// One timestep is equivalent to two window lengths(20ms).
-        /// If set to 0 we reserve enough frames for 3 seconds of audio(150).</param>
         /// <param name="aSampleRate">The sample-rate of the audio signal</param>
         /// <exception cref="ArgumentException">Thrown when the native binary failed to initialize the streaming mode.</exception>
-        unsafe void SetupStream(uint aPreAllocFrames, uint aSampleRate);
+        unsafe void CreateStream(uint aSampleRate);
 
         /// <summary>
         /// Feeds audio samples to an ongoing streaming inference.

@@ -7,6 +7,7 @@ import json
 
 from multiprocessing import cpu_count
 
+import absl.app
 import numpy as np
 import progressbar
 import tensorflow as tf
@@ -41,18 +42,21 @@ def sparse_tuple_to_texts(sp_tuple, alphabet):
 
 
 def evaluate(test_csvs, create_model, try_loading):
-    scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
-                    FLAGS.lm_binary_path, FLAGS.lm_trie_path,
-                    Config.alphabet)
+    if FLAGS.lm_binary_path:
+        scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
+                        FLAGS.lm_binary_path, FLAGS.lm_trie_path,
+                        Config.alphabet)
+    else:
+        scorer = None
 
     test_csvs = FLAGS.test_files.split(',')
-    test_sets = [create_dataset([csv], batch_size=FLAGS.test_batch_size) for csv in test_csvs]
+    test_sets = [create_dataset([csv], batch_size=FLAGS.test_batch_size, train_phase=False) for csv in test_csvs]
     iterator = tfv1.data.Iterator.from_structure(tfv1.data.get_output_types(test_sets[0]),
                                                  tfv1.data.get_output_shapes(test_sets[0]),
                                                  output_classes=tfv1.data.get_output_classes(test_sets[0]))
     test_init_ops = [iterator.make_initializer(test_set) for test_set in test_sets]
 
-    (batch_x, batch_x_len), batch_y = iterator.get_next()
+    batch_wav_filename, (batch_x, batch_x_len), batch_y = iterator.get_next()
 
     # One rate per layer
     no_dropout = [None] * 6
@@ -62,7 +66,7 @@ def evaluate(test_csvs, create_model, try_loading):
                              dropout=no_dropout)
 
     # Transpose to batch major and apply softmax for decoder
-    transposed = tf.nn.softmax(tf.transpose(logits, [1, 0, 2]))
+    transposed = tf.nn.softmax(tf.transpose(a=logits, perm=[1, 0, 2]))
 
     loss = tfv1.nn.ctc_loss(labels=batch_y,
                           inputs=logits,
@@ -89,6 +93,7 @@ def evaluate(test_csvs, create_model, try_loading):
             exit(1)
 
         def run_test(init_op, dataset):
+            wav_filenames = []
             losses = []
             predictions = []
             ground_truths = []
@@ -105,8 +110,8 @@ def evaluate(test_csvs, create_model, try_loading):
             # First pass, compute losses and transposed logits for decoding
             while True:
                 try:
-                    batch_logits, batch_loss, batch_lengths, batch_transcripts = \
-                        session.run([transposed, loss, batch_x_len, batch_y])
+                    batch_wav_filenames, batch_logits, batch_loss, batch_lengths, batch_transcripts = \
+                        session.run([batch_wav_filename, transposed, loss, batch_x_len, batch_y])
                 except tf.errors.OutOfRangeError:
                     break
 
@@ -114,6 +119,7 @@ def evaluate(test_csvs, create_model, try_loading):
                                                         num_processes=num_processes, scorer=scorer)
                 predictions.extend(d[0][1] for d in decoded)
                 ground_truths.extend(sparse_tensor_value_to_texts(batch_transcripts, Config.alphabet))
+                wav_filenames.extend(wav_filename.decode('UTF-8') for wav_filename in batch_wav_filenames)
                 losses.extend(batch_loss)
 
                 step_count += 1
@@ -121,7 +127,7 @@ def evaluate(test_csvs, create_model, try_loading):
 
             bar.finish()
 
-            wer, cer, samples = calculate_report(ground_truths, predictions, losses)
+            wer, cer, samples = calculate_report(wav_filenames, ground_truths, predictions, losses)
             mean_loss = np.mean(losses)
 
             # Take only the first report_count items
@@ -133,6 +139,7 @@ def evaluate(test_csvs, create_model, try_loading):
             for sample in report_samples:
                 print('WER: %f, CER: %f, loss: %f' %
                       (sample.wer, sample.cer, sample.loss))
+                print(' - wav: file://%s' % sample.wav_filename)
                 print(' - src: "%s"' % sample.src)
                 print(' - res: "%s"' % sample.res)
                 print('-' * 80)
@@ -164,5 +171,4 @@ def main(_):
 
 if __name__ == '__main__':
     create_flags()
-    tf.app.flags.DEFINE_string('test_output_file', '', 'path to a file to save all src/decoded/distance/loss tuples')
-    tfv1.app.run(main)
+    absl.app.run(main)

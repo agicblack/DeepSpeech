@@ -1,11 +1,13 @@
 python:
   packages_trusty:
-    apt: 'make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev liblzma-dev curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev'
-  packages_stretch:
-    apt: 'make build-essential libssl1.0-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev'
+    apt: 'make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev liblzma-dev curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libpng-dev libsox-dev libmagic-dev libgsm1-dev libltdl-dev'
+  packages_buster:
+    apt: 'make build-essential libssl-dev libffi-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev'
   brew:
     setup: 'install_local_homebrew "python-ds-test" && install_pkg_local_homebrew "sox" && install_pkg_local_homebrew "readline" && install_pkg_local_homebrew "openssl" && install_pkg_local_homebrew "pkg-config"'
     env: 'export EXTRA_ENV="PATH=$TASKCLUSTER_TASK_DIR/python-ds-test.brew/bin/:$PATH"'
+  packages_docs_bionic:
+    apt: 'python3 python3-pip zip doxygen'
 electronjs:
   packages_xenial:
     apt: 'libatk1.0-0 libatk-bridge2.0-0 libcairo2 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libx11-xcb1 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 xvfb'
@@ -25,18 +27,22 @@ nodejs:
     prep_10: 'echo "deb http://deb.nodesource.com/node_10.x xenial main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
     prep_11: 'echo "deb http://deb.nodesource.com/node_11.x xenial main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
     prep_12: 'echo "deb http://deb.nodesource.com/node_12.x xenial main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-  packages_stretch:
+  packages_docs_bionic:
+    apt: 'nodejs'
+    apt_pinning: '(echo "Package: nodejs" && echo "Pin: origin deb.nodesource.com" && echo "Pin-Priority: 999") > /etc/apt/preferences'
+    prep_12: 'echo "deb http://deb.nodesource.com/node_12.x bionic main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+  packages_buster:
     apt: 'nodejs sox'
     apt_pinning: '(echo "Package: nodejs" && echo "Pin: origin deb.nodesource.com" && echo "Pin-Priority: 999") > /etc/apt/preferences'
-    prep_4: 'echo "deb http://deb.nodesource.com/node_4.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_5: 'echo "deb http://deb.nodesource.com/node_5.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_6: 'echo "deb http://deb.nodesource.com/node_6.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_7: 'echo "deb http://deb.nodesource.com/node_7.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_8: 'echo "deb http://deb.nodesource.com/node_8.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_9: 'echo "deb http://deb.nodesource.com/node_9.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_10: 'echo "deb http://deb.nodesource.com/node_10.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_11: 'echo "deb http://deb.nodesource.com/node_11.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
-    prep_12: 'echo "deb http://deb.nodesource.com/node_12.x stretch main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_4: 'echo "deb http://deb.nodesource.com/node_4.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_5: 'echo "deb http://deb.nodesource.com/node_5.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_6: 'echo "deb http://deb.nodesource.com/node_6.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_7: 'echo "deb http://deb.nodesource.com/node_7.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_8: 'echo "deb http://deb.nodesource.com/node_8.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_9: 'echo "deb http://deb.nodesource.com/node_9.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_10: 'echo "deb http://deb.nodesource.com/node_10.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_11: 'echo "deb http://deb.nodesource.com/node_11.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
+    prep_12: 'echo "deb http://deb.nodesource.com/node_12.x buster main" > /etc/apt/sources.list.d/nodesource.list && wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -'
   brew:
     # Using 'nvm' from homebrew results in installing v0.33.6 which seems to
     # suffer from a bug making it unable to work as of now:
@@ -80,10 +86,10 @@ swig:
     # patch of _0001 would require the reverse patch of _0002 to be already
     # applied, and we don't want to. So just test that reversing _0002 in
     # dry-run.
-    osx_v12: '(if ! patch -R -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/4.0.0/share/swig/4.0.0/ -p2 -s -f --dry-run < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0003-Move-to-new-MaybeLocal-based-GetFunction.patch ; then
-patch -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/4.0.0/share/swig/4.0.0/ -p2 < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0001-Move-from-v8-Handle-to-v8-Local.patch &&
-patch -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/4.0.0/share/swig/4.0.0/ -p2 < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0002-Move-to-new-MaybeLocal-based-NewInstance.patch &&
-patch -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/4.0.0/share/swig/4.0.0/ -p2 < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0003-Move-to-new-MaybeLocal-based-GetFunction.patch;
+    osx_v12: '(if ! patch -R -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/*/share/swig/*/ -p2 -s -f --dry-run < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0003-Move-to-new-MaybeLocal-based-GetFunction.patch ; then
+patch -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/*/share/swig/*/ -p2 < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0001-Move-from-v8-Handle-to-v8-Local.patch &&
+patch -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/*/share/swig/*/ -p2 < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0002-Move-to-new-MaybeLocal-based-NewInstance.patch &&
+patch -d $TASKCLUSTER_TASK_DIR/homebrew/Cellar/swig/*/share/swig/*/ -p2 < $TASKCLUSTER_TASK_DIR/DeepSpeech/ds/native_client/swig_node_v12_0003-Move-to-new-MaybeLocal-based-GetFunction.patch;
 else
 echo "NO NODEJS v12 PATCH NEEDED";
 fi)'

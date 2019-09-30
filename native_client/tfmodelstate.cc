@@ -25,12 +25,10 @@ TFModelState::~TFModelState()
 
 int
 TFModelState::init(const char* model_path,
-                   unsigned int n_features,
-                   unsigned int n_context,
                    const char* alphabet_path,
                    unsigned int beam_width)
 {
-  int err = ModelState::init(model_path, n_features, n_context, alphabet_path, beam_width);
+  int err = ModelState::init(model_path, alphabet_path, beam_width);
   if (err != DS_ERR_OK) {
     return err;
   }
@@ -108,9 +106,9 @@ TFModelState::init(const char* model_path,
       }
 
       int final_dim_size = logits_shape.vec<int>()(2) - 1;
-      if (final_dim_size != alphabet_->GetSize()) {
+      if (final_dim_size != alphabet_.GetSize()) {
         std::cerr << "Error: Alphabet size does not match loaded model: alphabet "
-                  << "has size " << alphabet_->GetSize()
+                  << "has size " << alphabet_.GetSize()
                   << ", but model has " << final_dim_size
                   << " classes in its output. Make sure you're passing an alphabet "
                   << "file with the same size as the one used for training."
@@ -173,7 +171,7 @@ TFModelState::infer(const std::vector<float>& mfcc,
                     vector<float>& state_c_output,
                     vector<float>& state_h_output)
 {
-  const size_t num_classes = alphabet_->GetSize() + 1; // +1 for blank
+  const size_t num_classes = alphabet_.GetSize() + 1; // +1 for blank
 
   Tensor input = tensor_from_vector(mfcc, TensorShape({BATCH_SIZE, n_steps_, 2*n_context_+1, n_features_}));
   Tensor previous_state_c_t = tensor_from_vector(previous_state_c, TensorShape({BATCH_SIZE, (long long)state_size_}));

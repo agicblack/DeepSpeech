@@ -1,16 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
-import tensorflow as tf
-
 import os
+import absl.flags
 
-FLAGS = tf.app.flags.FLAGS
+FLAGS = absl.flags.FLAGS
 
 def create_flags():
     # Importer
     # ========
 
-    f = tf.app.flags
+    f = absl.flags
 
     f.DEFINE_string('train_files', '', 'comma separated list of files specifying the dataset used for training. Multiple files will get merged. If empty, training will not be run.')
     f.DEFINE_string('dev_files', '', 'comma separated list of files specifying the dataset used for validation. Multiple files will get merged. If empty, validation will not be run.')
@@ -21,6 +20,28 @@ def create_flags():
     f.DEFINE_integer('feature_win_len', 32, 'feature extraction audio window length in milliseconds')
     f.DEFINE_integer('feature_win_step', 20, 'feature extraction window step length in milliseconds')
     f.DEFINE_integer('audio_sample_rate', 16000, 'sample rate value expected by model')
+
+    # Data Augmentation
+    # ================
+
+    f.DEFINE_float('data_aug_features_additive', 0, 'std of the Gaussian additive noise')
+    f.DEFINE_float('data_aug_features_multiplicative', 0, 'std of normal distribution around 1 for multiplicative noise')
+
+    f.DEFINE_float('augmentation_spec_dropout_keeprate', 1, 'keep rate of dropout augmentation on spectrogram (if 1, no dropout will be performed on spectrogram)')
+
+    f.DEFINE_boolean('augmentation_freq_and_time_masking', False, 'whether to use frequency and time masking augmentation')
+    f.DEFINE_integer('augmentation_freq_and_time_masking_freq_mask_range', 5, 'max range of masks in the frequency domain when performing freqtime-mask augmentation')
+    f.DEFINE_integer('augmentation_freq_and_time_masking_number_freq_masks', 3, 'number of masks in the frequency domain when performing freqtime-mask augmentation')
+    f.DEFINE_integer('augmentation_freq_and_time_masking_time_mask_range', 2, 'max range of masks in the time domain when performing freqtime-mask augmentation')
+    f.DEFINE_integer('augmentation_freq_and_time_masking_number_time_masks', 3, 'number of masks in the time domain when performing freqtime-mask augmentation')
+
+    f.DEFINE_float('augmentation_speed_up_std', 0, 'std for speeding-up tempo. If std is 0, this augmentation is not performed')
+
+    f.DEFINE_boolean('augmentation_pitch_and_tempo_scaling', False, 'whether to use spectrogram speed and tempo scaling')
+    f.DEFINE_float('augmentation_pitch_and_tempo_scaling_min_pitch', 0.95, 'min value of pitch scaling')
+    f.DEFINE_float('augmentation_pitch_and_tempo_scaling_max_pitch', 1.2, 'max value of pitch scaling')
+    f.DEFINE_float('augmentation_pitch_and_tempo_scaling_max_tempo', 1.2, 'max vlaue of tempo scaling')
+
 
     # Global Constants
     # ================
@@ -55,7 +76,9 @@ def create_flags():
 
     f.DEFINE_integer('inter_op_parallelism_threads', 0, 'number of inter-op parallelism threads - see tf.ConfigProto for more details. USE OF THIS FLAG IS UNSUPPORTED')
     f.DEFINE_integer('intra_op_parallelism_threads', 0, 'number of intra-op parallelism threads - see tf.ConfigProto for more details. USE OF THIS FLAG IS UNSUPPORTED')
+    f.DEFINE_boolean('use_allow_growth', False, 'use Allow Growth flag which will allocate only required amount of GPU memory and prevent full allocation of available GPU memory')
     f.DEFINE_boolean('use_cudnn_rnn', False, 'use CuDNN RNN backend for training on GPU. Note that checkpoints created with this flag can only be used with CuDNN RNN, i.e. fine tuning on a CPU device will not work')
+    f.DEFINE_string('cudnn_checkpoint', '', 'path to a checkpoint created using --use_cudnn_rnn. Specifying this flag allows one to convert a CuDNN RNN checkpoint to a checkpoint capable of running on a CPU graph.')
 
     # Sample limits
 
@@ -88,6 +111,8 @@ def create_flags():
 
     f.DEFINE_string('summary_dir', '', 'target directory for TensorBoard summaries - defaults to directory "deepspeech/summaries" within user\'s data home specified by the XDG Base Directory Specification')
 
+    f.DEFINE_string('test_output_file', '', 'path to a file to save all src/decoded/distance/loss tuples generated during a test epoch')
+
     # Geometry
 
     f.DEFINE_integer('n_hidden', 2048, 'layer width to use when initialising layers')
@@ -117,14 +142,6 @@ def create_flags():
     f.DEFINE_string('one_shot_infer', '', 'one-shot inference mode: specify a wav file and the script will load the checkpoint and perform inference on it.')
 
     # Register validators for paths which require a file to be specified
-
-    f.register_validator('lm_binary_path',
-                         os.path.isfile,
-                         message='The file pointed to by --lm_binary_path must exist and be readable.')
-
-    f.register_validator('lm_trie_path',
-                         os.path.isfile,
-                         message='The file pointed to by --lm_trie_path must exist and be readable.')
 
     f.register_validator('alphabet_config_path',
                          os.path.isfile,

@@ -8,7 +8,11 @@ import sys
 LOG_LEVEL_INDEX = sys.argv.index('--log_level') + 1 if '--log_level' in sys.argv else 0
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = sys.argv[LOG_LEVEL_INDEX] if 0 < LOG_LEVEL_INDEX < len(sys.argv) else '3'
 
+<<<<<<< HEAD
 import time
+=======
+import absl.app
+>>>>>>> d0a578221d61f14d1e88195a3ce88bd396a2aa8e
 import numpy as np
 import progressbar
 import shutil
@@ -50,7 +54,7 @@ def variable_on_cpu(name, shape, initializer):
 
 
 def create_overlapping_windows(batch_x):
-    batch_size = tf.shape(batch_x)[0]
+    batch_size = tf.shape(input=batch_x)[0]
     window_width = 2 * Config.n_context + 1
     num_channels = Config.n_input
 
@@ -61,7 +65,7 @@ def create_overlapping_windows(batch_x):
                                .reshape(window_width, num_channels, window_width * num_channels), tf.float32) # pylint: disable=bad-continuation
 
     # Create overlapping windows
-    batch_x = tf.nn.conv1d(batch_x, eye_filter, stride=1, padding='SAME')
+    batch_x = tf.nn.conv1d(input=batch_x, filters=eye_filter, stride=1, padding='SAME')
 
     # Remove dummy depth dimension and reshape into [batch_size, n_windows, window_width, n_input]
     batch_x = tf.reshape(batch_x, [batch_size, -1, window_width, num_channels])
@@ -71,8 +75,8 @@ def create_overlapping_windows(batch_x):
 
 def dense(name, x, units, dropout_rate=None, relu=True):
     with tfv1.variable_scope(name):
-        bias = variable_on_cpu('bias', [units], tf.zeros_initializer())
-        weights = variable_on_cpu('weights', [x.shape[-1], units], tf.contrib.layers.xavier_initializer())
+        bias = variable_on_cpu('bias', [units], tfv1.zeros_initializer())
+        weights = variable_on_cpu('weights', [x.shape[-1], units], tfv1.keras.initializers.VarianceScaling(scale=1.0, mode="fan_avg", distribution="uniform"))
 
     output = tf.nn.bias_add(tf.matmul(x, weights), bias)
 
@@ -116,11 +120,20 @@ def rnn_impl_static_rnn(x, seq_length, previous_state, reuse):
     return output, output_state
 
 
+<<<<<<< HEAD
 def create_model(batch_x, seq_length, dropout, reuse=False, previous_state=None, overlap=True, rnn_impl=rnn_impl_lstmblockfusedcell):
     layers = {}
 
     # Input shape: [batch_size, n_steps, n_input + 2*n_input*n_context]
     batch_size = tf.shape(batch_x)[0]
+=======
+def create_model(batch_x, seq_length, dropout, reuse=False, batch_size=None, previous_state=None, overlap=True, rnn_impl=rnn_impl_lstmblockfusedcell):
+    layers = {}
+
+    # Input shape: [batch_size, n_steps, n_input + 2*n_input*n_context]
+    if not batch_size:
+        batch_size = tf.shape(input=batch_x)[0]
+>>>>>>> d0a578221d61f14d1e88195a3ce88bd396a2aa8e
 
     # Create overlapping feature windows if needed
     if overlap:
@@ -130,7 +143,7 @@ def create_model(batch_x, seq_length, dropout, reuse=False, previous_state=None,
     # This is done to prepare the batch for input into the first layer which expects a tensor of rank `2`.
 
     # Permute n_steps and batch_size
-    batch_x = tf.transpose(batch_x, [1, 0, 2, 3])
+    batch_x = tf.transpose(a=batch_x, perm=[1, 0, 2, 3])
     # Reshape to prepare input for first layer
     batch_x = tf.reshape(batch_x, [-1, Config.n_input + 2*Config.n_input*Config.n_context]) # (n_steps*batch_size, n_input + 2*n_input*n_context)
     layers['input_reshaped'] = batch_x
@@ -188,19 +201,26 @@ def calculate_mean_edit_distance_and_loss(iterator, dropout, reuse):
     the decoded result and the batch's original Y.
     '''
     # Obtain the next batch of data
-    (batch_x, batch_seq_len), batch_y = iterator.get_next()
+    batch_filenames, (batch_x, batch_seq_len), batch_y = iterator.get_next()
 
     # Calculate the logits of the batch
+<<<<<<< HEAD
     logits, _ = create_model(batch_x, batch_seq_len, dropout, reuse=reuse)
+=======
+    logits, _ = create_model(batch_x, batch_seq_len, dropout, reuse=reuse, rnn_impl=rnn_impl)
+>>>>>>> d0a578221d61f14d1e88195a3ce88bd396a2aa8e
 
     # Compute the CTC loss using TensorFlow's `ctc_loss`
     total_loss = tfv1.nn.ctc_loss(labels=batch_y, inputs=logits, sequence_length=batch_seq_len)
 
+    # Check if any files lead to non finite loss
+    non_finite_files = tf.gather(batch_filenames, tfv1.where(~tf.math.is_finite(total_loss)))
+
     # Calculate the average loss across the batch
-    avg_loss = tf.reduce_mean(total_loss)
+    avg_loss = tf.reduce_mean(input_tensor=total_loss)
 
     # Finally we return the average loss
-    return avg_loss
+    return avg_loss, non_finite_files
 
 
 # Adam Optimization
@@ -248,6 +268,9 @@ def get_tower_results(iterator, optimizer, dropout_rates):
     # Tower gradients to return
     tower_gradients = []
 
+    # Aggregate any non finite files in the batches
+    tower_non_finite_files = []
+
     with tfv1.variable_scope(tfv1.get_variable_scope()):
         # Loop over available_devices
         for i in range(len(Config.available_devices)):
@@ -258,7 +281,11 @@ def get_tower_results(iterator, optimizer, dropout_rates):
                 with tf.name_scope('tower_%d' % i):
                     # Calculate the avg_loss and mean_edit_distance and retrieve the decoded
                     # batch along with the original batch's labels (Y) of this tower
+<<<<<<< HEAD
                     avg_loss = calculate_mean_edit_distance_and_loss(iterator, dropout_rates, reuse=i > 0)
+=======
+                    avg_loss, non_finite_files = calculate_mean_edit_distance_and_loss(iterator, dropout_rates, reuse=i > 0)
+>>>>>>> d0a578221d61f14d1e88195a3ce88bd396a2aa8e
 
                     # Allow for variables to be re-used by the next tower
                     tfv1.get_variable_scope().reuse_variables()
@@ -272,13 +299,15 @@ def get_tower_results(iterator, optimizer, dropout_rates):
                     # Retain tower's gradients
                     tower_gradients.append(gradients)
 
+                    tower_non_finite_files.append(non_finite_files)
 
-    avg_loss_across_towers = tf.reduce_mean(tower_avg_losses, 0)
-
+    avg_loss_across_towers = tf.reduce_mean(input_tensor=tower_avg_losses, axis=0)
     tfv1.summary.scalar(name='step_loss', tensor=avg_loss_across_towers, collections=['step_summaries'])
 
+    all_non_finite_files = tf.concat(tower_non_finite_files, axis=0)
+
     # Return gradients and the average loss
-    return tower_gradients, avg_loss_across_towers
+    return tower_gradients, avg_loss_across_towers, all_non_finite_files
 
 
 def average_gradients(tower_gradients):
@@ -306,7 +335,7 @@ def average_gradients(tower_gradients):
 
             # Average over the 'tower' dimension
             grad = tf.concat(grads, 0)
-            grad = tf.reduce_mean(grad, 0)
+            grad = tf.reduce_mean(input_tensor=grad, axis=0)
 
             # Create a gradient/variable tuple for the current variable with its average gradient
             grad_and_var = (grad, grad_and_vars[0][1])
@@ -329,11 +358,11 @@ def log_variable(variable, gradient=None):
     Furthermore it logs a histogram of its state and (if given) of an optimization gradient.
     '''
     name = variable.name.replace(':', '_')
-    mean = tf.reduce_mean(variable)
+    mean = tf.reduce_mean(input_tensor=variable)
     tfv1.summary.scalar(name='%s/mean'   % name, tensor=mean)
-    tfv1.summary.scalar(name='%s/sttdev' % name, tensor=tf.sqrt(tf.reduce_mean(tf.square(variable - mean))))
-    tfv1.summary.scalar(name='%s/max'    % name, tensor=tf.reduce_max(variable))
-    tfv1.summary.scalar(name='%s/min'    % name, tensor=tf.reduce_min(variable))
+    tfv1.summary.scalar(name='%s/sttdev' % name, tensor=tf.sqrt(tf.reduce_mean(input_tensor=tf.square(variable - mean))))
+    tfv1.summary.scalar(name='%s/max'    % name, tensor=tf.reduce_max(input_tensor=variable))
+    tfv1.summary.scalar(name='%s/min'    % name, tensor=tf.reduce_min(input_tensor=variable))
     tfv1.summary.histogram(name=name, values=variable)
     if gradient is not None:
         if isinstance(gradient, tf.IndexedSlices):
@@ -375,7 +404,8 @@ def train():
     # Create training and validation datasets
     train_set = create_dataset(FLAGS.train_files.split(','),
                                batch_size=FLAGS.train_batch_size,
-                               cache_path=FLAGS.feature_cache)
+                               cache_path=FLAGS.feature_cache,
+                               train_phase=True)
 
     iterator = tfv1.data.Iterator.from_structure(tfv1.data.get_output_types(train_set),
                                                  tfv1.data.get_output_shapes(train_set),
@@ -386,7 +416,7 @@ def train():
 
     if FLAGS.dev_files:
         dev_csvs = FLAGS.dev_files.split(',')
-        dev_sets = [create_dataset([csv], batch_size=FLAGS.dev_batch_size) for csv in dev_csvs]
+        dev_sets = [create_dataset([csv], batch_size=FLAGS.dev_batch_size, train_phase=False) for csv in dev_csvs]
         dev_init_ops = [iterator.make_initializer(dev_set) for dev_set in dev_sets]
 
     # Dropout
@@ -405,7 +435,11 @@ def train():
 
     # Building the graph
     optimizer = create_optimizer()
+<<<<<<< HEAD
     gradients, loss = get_tower_results(iterator, optimizer, dropout_rates)
+=======
+    gradients, loss, non_finite_files = get_tower_results(iterator, optimizer, dropout_rates)
+>>>>>>> d0a578221d61f14d1e88195a3ce88bd396a2aa8e
 
     # Average tower gradients across GPUs
     avg_tower_gradients = average_gradients(gradients)
@@ -431,16 +465,60 @@ def train():
     best_dev_path = os.path.join(FLAGS.checkpoint_dir, 'best_dev')
     best_dev_filename = 'best_dev_checkpoint'
 
+    # Save flags next to checkpoints
+    os.makedirs(FLAGS.checkpoint_dir, exist_ok=True)
+
+    flags_file = os.path.join(FLAGS.checkpoint_dir, 'flags.txt')
+    with open(flags_file, 'w') as fout:
+        fout.write(FLAGS.flags_into_string())
+
     initializer = tfv1.global_variables_initializer()
 
     with tfv1.Session(config=Config.session_config) as session:
         log_debug('Session opened.')
 
-        tfv1.get_default_graph().finalize()
-
         # Loading or initializing
         loaded = False
-        if FLAGS.load in ['auto', 'last']:
+
+        # Initialize training from a CuDNN RNN checkpoint
+        if FLAGS.cudnn_checkpoint:
+            if FLAGS.use_cudnn_rnn:
+                log_error('Trying to use --cudnn_checkpoint but --use_cudnn_rnn '
+                          'was specified. The --cudnn_checkpoint flag is only '
+                          'needed when converting a CuDNN RNN checkpoint to '
+                          'a CPU-capable graph. If your system is capable of '
+                          'using CuDNN RNN, you can just specify the CuDNN RNN '
+                          'checkpoint normally with --checkpoint_dir.')
+                exit(1)
+
+            log_info('Converting CuDNN RNN checkpoint from {}'.format(FLAGS.cudnn_checkpoint))
+            ckpt = tfv1.train.load_checkpoint(FLAGS.cudnn_checkpoint)
+            missing_variables = []
+
+            # Load compatible variables from checkpoint
+            for v in tfv1.global_variables():
+                try:
+                    v.load(ckpt.get_tensor(v.op.name), session=session)
+                except tf.errors.NotFoundError:
+                    missing_variables.append(v)
+
+            # Check that the only missing variables are the Adam moment tensors
+            if any('Adam' not in v.op.name for v in missing_variables):
+                log_error('Tried to load a CuDNN RNN checkpoint but there were '
+                          'more missing variables than just the Adam moment '
+                          'tensors.')
+                exit(1)
+
+            # Initialize Adam moment tensors from scratch to allow use of CuDNN
+            # RNN checkpoints.
+            log_info('Initializing missing Adam moment tensors.')
+            init_op = tfv1.variables_initializer(missing_variables)
+            session.run(init_op)
+            loaded = True
+
+        tfv1.get_default_graph().finalize()
+
+        if not loaded and FLAGS.load in ['auto', 'last']:
             loaded = try_loading(session, checkpoint_saver, checkpoint_filename, 'most recent')
         if not loaded and FLAGS.load in ['auto', 'best']:
             loaded = try_loading(session, best_dev_saver, best_dev_filename, 'best validation')
@@ -486,11 +564,16 @@ def train():
             # Batch loop
             while True:
                 try:
-                    _, current_step, batch_loss, step_summary = \
-                        session.run([train_op, global_step, loss, step_summaries_op],
+                    _, current_step, batch_loss, problem_files, step_summary = \
+                        session.run([train_op, global_step, loss, non_finite_files, step_summaries_op],
                                     feed_dict=feed_dict)
                 except tf.errors.OutOfRangeError:
                     break
+
+                if problem_files.size > 0:
+                    problem_files = [f.decode('utf8') for f in problem_files[..., 0]]
+                    log_error('The following files caused an infinite (or NaN) '
+                              'loss: {}'.format(','.join(problem_files)))
 
                 total_loss += batch_loss
                 step_count += 1
@@ -585,7 +668,7 @@ def create_inference_graph(batch_size=1, n_steps=16, tflite=False):
         previous_state_c = tfv1.placeholder(tf.float32, [batch_size, Config.n_cell_dim], name='previous_state_c')
         previous_state_h = tfv1.placeholder(tf.float32, [batch_size, Config.n_cell_dim], name='previous_state_h')
 
-        previous_state = tf.contrib.rnn.LSTMStateTuple(previous_state_c, previous_state_h)
+        previous_state = tf.nn.rnn_cell.LSTMStateTuple(previous_state_c, previous_state_h)
 
     # One rate per layer
     no_dropout = [None] * 6
@@ -791,9 +874,12 @@ def do_single_file_inference(input_file_path):
 
         logits = np.squeeze(logits)
 
-        scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
-                        FLAGS.lm_binary_path, FLAGS.lm_trie_path,
-                        Config.alphabet)
+        if FLAGS.lm_binary_path:
+            scorer = Scorer(FLAGS.lm_alpha, FLAGS.lm_beta,
+                            FLAGS.lm_binary_path, FLAGS.lm_trie_path,
+                            Config.alphabet)
+        else:
+            scorer = None
         decoded = ctc_beam_search_decoder(logits, Config.alphabet, FLAGS.beam_width, scorer=scorer)
         # Print highest probability result
         print(decoded[0][1])
@@ -821,4 +907,4 @@ def main(_):
 
 if __name__ == '__main__':
     create_flags()
-    tfv1.app.run(main)
+    absl.app.run(main)
