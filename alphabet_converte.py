@@ -17,7 +17,7 @@ import os
 cwd = os.getcwd()
 
 try :
-    with open(cwd+'/usr/src/DeepSpeech/data/alphabet.txt') as alphabet:
+    with open(cwd+'data/alphabet.txt') as alphabet:
         "read your alphabet file characters"
         characters = alphabet.readlines()[1] #read lign 2
         "transform to unicode"
